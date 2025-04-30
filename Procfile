@@ -1,0 +1,1 @@
+worker: python intp_bot.py
