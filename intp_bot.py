@@ -1,0 +1,107 @@
+import tweepy
+import requests
+import os
+import logging
+import schedule
+import time
+from datetime import datetime
+from dotenv import load_dotenv
+from config import BANNED_WORDS
+
+load_dotenv()
+
+# ログ設定
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+# Twitter v2クライアント初期化
+client = tweepy.Client(
+    consumer_key=os.getenv('X_API_KEY'),
+    consumer_secret=os.getenv('X_API_SECRET'),
+    access_token=os.getenv('X_ACCESS_TOKEN'),
+    access_token_secret=os.getenv('X_ACCESS_TOKEN_SECRET'),
+    bearer_token=os.getenv('X_BEARER_TOKEN'),
+    wait_on_rate_limit=True
+)
+
+def get_claude_response(prompt):
+    headers = {
+        'x-api-key': os.getenv("ANTHROPIC_API_KEY"),
+        'Content-Type': 'application/json',
+        'anthropic-version': '2023-06-01'
+    }
+
+    data = {
+        "model": "claude-3-sonnet-20240229",  # モデル名を正しいものに修正
+        "messages": [
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ],
+        "max_tokens": 150
+    }
+
+    logging.info("Claude API リクエスト送信内容:")
+    logging.info(f"URL: https://api.anthropic.com/v1/messages")
+    logging.info(f"Headers: {headers}")
+    logging.info(f"Payload: {data}")
+
+    try:
+        response = requests.post(
+            'https://api.anthropic.com/v1/messages',
+            json=data,
+            headers=headers,
+            timeout=10
+        )
+        response.raise_for_status()
+        content_blocks = response.json().get('content', [])
+        if content_blocks and content_blocks[0].get('type') == 'text':
+            return content_blocks[0].get('text')
+    except Exception as e:
+        logging.error(f"Claude API Error: {str(e)}")
+        if response is not None:
+            try:
+                logging.error(f"API Response Content: {response.text}")
+            except:
+                pass
+    return None
+
+def content_check(text):
+    return any(word in text.lower() for word in BANNED_WORDS)
+
+def post_tweet():
+    hour = datetime.now().hour
+    if 6 <= hour <= 23:
+        prompt = """以下の条件でX投稿を作成：
+
+- 対象: INTP
+- 内容: INTPの自己肯定感を上げる自己啓発
+- 目的: バズる
+- 文字数: 130〜140字
+- 文体: 論理的、感情少なめ
+- 差別化: 過去と異なる内容（バリエーション）
+- 構成: 1投稿＝1メッセージ
+- 口調: サディストで下品
+- キャラ: 倫理1%, 安全1%, コンプラ1%
+- 必須: 「INTP」という語を含む"""
+        
+        response = get_claude_response(prompt)
+        if response and not content_check(response):
+            try:
+                client.create_tweet(text=response)
+                logging.info("ツイートを投稿しました")
+            except tweepy.TweepyException as e:
+                logging.error(f"ツイート投稿失敗: {e}")
+        else:
+            logging.error("適切な応答が得られませんでした")
+    else:
+        logging.info("現在の時間は投稿対象外です")
+
+# スケジュール設定（毎時間実行）
+schedule.every().hour.at(":00").do(post_tweet)
+
+if __name__ == "__main__":
+    logging.info("スケジューラー起動中...")
+    while True:
+        schedule.run_pending()
+        time.sleep(30)
