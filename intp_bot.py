@@ -31,7 +31,7 @@ def get_claude_response(prompt):
     }
 
     data = {
-        "model": "claude-3-sonnet-20240229",  # モデル名を正しいものに修正
+        "model": "claude-3-7-sonnet-20250219",  # モデル名を正しいものに修正
         "messages": [
             {
                 "role": "user",
