@@ -31,14 +31,14 @@ def get_claude_response(prompt):
     }
 
     data = {
-        "model": "claude-3-7-sonnet-20250219",  # モデル名を正しいものに修正
+        "model": "claude-3-7-sonnet-20250219",
         "messages": [
             {
                 "role": "user",
                 "content": prompt
             }
         ],
-        "max_tokens": 150
+        "max_tokens": 160
     }
 
     logging.info("Claude API リクエスト送信内容:")
@@ -71,7 +71,7 @@ def content_check(text):
 
 def post_tweet():
     hour = datetime.now().hour
-    if 6 <= hour <= 23:
+    if 6 <= hour <= 24:
         prompt = """以下の条件でX投稿を作成：
 
 - 対象: INTP
@@ -81,7 +81,7 @@ def post_tweet():
 - 文体: 論理的、感情少なめ、お前
 - 差別化: 過去と異なる内容（バリエーション）
 - 構成: 1投稿＝1メッセージ
-- 口調: 知的で下品で下ネタ
+- 口調: 下ネタ的で知的で下品
 - キャラ: 倫理1%, 安全1%, コンプラ1%
 - 必須: 「INTP」という語を含む"""
         
@@ -97,8 +97,8 @@ def post_tweet():
     else:
         logging.info("現在の時間は投稿対象外です")
 
-# スケジュール設定（毎時間実行）
-schedule.every().hour.at(":00").do(post_tweet)
+# スケジュール設定（3時間ごとに実行）
+schedule.every(3).hours.at(":00").do(post_tweet)
 
 if __name__ == "__main__":
     logging.info("スケジューラー起動中...")
