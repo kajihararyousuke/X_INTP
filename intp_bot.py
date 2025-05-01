@@ -5,6 +5,7 @@ import logging
 import schedule
 import time
 from datetime import datetime
+import pytz  # pytzをインポート
 from dotenv import load_dotenv
 from config import BANNED_WORDS
 
@@ -70,7 +71,13 @@ def content_check(text):
     return any(word in text.lower() for word in BANNED_WORDS)
 
 def post_tweet():
-    hour = datetime.now().hour
+    # 日本時間を設定
+    tokyo_tz = pytz.timezone('Asia/Tokyo')
+    now = datetime.now(tokyo_tz)
+    hour = now.hour  # 日本時間での現在時刻を取得
+
+    logging.info(f"現在の日本時間: {hour}時")  # ログで時間を確認
+
     if 6 <= hour <= 24:
         prompt = """以下の条件でX投稿を作成：
 
