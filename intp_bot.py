@@ -25,6 +25,7 @@ client = tweepy.Client(
 )
 
 def get_claude_response(prompt):
+    response = None  # ← これを追加！
     headers = {
         'x-api-key': os.getenv("ANTHROPIC_API_KEY"),
         'Content-Type': 'application/json',
@@ -33,12 +34,7 @@ def get_claude_response(prompt):
 
     data = {
         "model": "claude-3-7-sonnet-20250219",
-        "messages": [
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ],
+        "messages": [{"role": "user", "content": prompt}],
         "max_tokens": 160
     }
 
@@ -52,7 +48,7 @@ def get_claude_response(prompt):
             'https://api.anthropic.com/v1/messages',
             json=data,
             headers=headers,
-            timeout=10
+            timeout=30
         )
         response.raise_for_status()
         content_blocks = response.json().get('content', [])
@@ -66,6 +62,7 @@ def get_claude_response(prompt):
             except:
                 pass
     return None
+
 
 def content_check(text):
     return any(word in text.lower() for word in BANNED_WORDS)
