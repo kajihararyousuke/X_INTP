@@ -5,7 +5,7 @@ import logging
 import schedule
 import time
 from datetime import datetime
-import pytz  # pytzをインポート
+import pytz
 from dotenv import load_dotenv
 from config import BANNED_WORDS
 
@@ -24,8 +24,9 @@ client = tweepy.Client(
     wait_on_rate_limit=True
 )
 
+# Claude API 呼び出し
 def get_claude_response(prompt):
-    response = None  # ← これを追加！
+    response = None
     headers = {
         'x-api-key': os.getenv("ANTHROPIC_API_KEY"),
         'Content-Type': 'application/json',
@@ -63,17 +64,29 @@ def get_claude_response(prompt):
                 pass
     return None
 
-
+# 禁止ワードチェック
 def content_check(text):
     return any(word in text.lower() for word in BANNED_WORDS)
 
+# 重複チェック
+def is_duplicate(text):
+    if not os.path.exists("tweet_log.txt"):
+        return False
+    with open("tweet_log.txt", "r", encoding="utf-8") as f:
+        return text.strip() in f.read()
+
+# 応答をログに保存
+def log_response(text):
+    with open("tweet_log.txt", "a", encoding="utf-8") as f:
+        f.write(f"{datetime.now()} >>> {text}\n\n")
+
+# ツイート処理
 def post_tweet():
-    # 日本時間を設定
     tokyo_tz = pytz.timezone('Asia/Tokyo')
     now = datetime.now(tokyo_tz)
-    hour = now.hour  # 日本時間での現在時刻を取得
+    hour = now.hour
 
-    logging.info(f"現在の日本時間: {hour}時")  # ログで時間を確認
+    logging.info(f"現在の日本時間: {hour}時")
 
     if 6 <= hour <= 24:
         prompt = """以下の条件でX投稿を作成：
@@ -88,9 +101,13 @@ def post_tweet():
 - 口調: 知的で下品
 - キャラ: 倫理1%, 安全1%, コンプラ1%
 - 必須: 「INTP」という語を含む"""
-        
+
         response = get_claude_response(prompt)
         if response and not content_check(response):
+            if is_duplicate(response):
+                logging.warning("重複ツイートの可能性があるためスキップします")
+                return
+            log_response(response)
             try:
                 client.create_tweet(text=response)
                 logging.info("ツイートを投稿しました")
@@ -101,7 +118,7 @@ def post_tweet():
     else:
         logging.info("現在の時間は投稿対象外です")
 
-# スケジュール設定（3時間ごとに実行）
+# スケジュール設定（3時間ごと）
 schedule.every(3).hours.at(":00").do(post_tweet)
 
 if __name__ == "__main__":
