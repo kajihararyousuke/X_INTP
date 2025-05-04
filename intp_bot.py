@@ -113,6 +113,8 @@ def post_tweet():
                 logging.info("ツイートを投稿しました")
             except tweepy.TweepyException as e:
                 logging.error(f"ツイート投稿失敗: {e}")
+                if hasattr(e, 'response') and e.response is not None:
+                    logging.error(f"詳細エラー: {e.response.text}")
         else:
             logging.error("適切な応答が得られませんでした")
     else:
