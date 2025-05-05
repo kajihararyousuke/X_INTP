@@ -26,7 +26,10 @@ client = tweepy.Client(
 
 # Claude API 呼び出し
 def get_claude_response(prompt):
-    response = None
+    import time
+
+    max_retries = 3
+    retry_delay = 3  # 秒
     headers = {
         'x-api-key': os.getenv("ANTHROPIC_API_KEY"),
         'Content-Type': 'application/json',
@@ -44,24 +47,33 @@ def get_claude_response(prompt):
     logging.info(f"Headers: {headers}")
     logging.info(f"Payload: {data}")
 
-    try:
-        response = requests.post(
-            'https://api.anthropic.com/v1/messages',
-            json=data,
-            headers=headers,
-            timeout=30
-        )
-        response.raise_for_status()
-        content_blocks = response.json().get('content', [])
-        if content_blocks and content_blocks[0].get('type') == 'text':
-            return content_blocks[0].get('text')
-    except Exception as e:
-        logging.error(f"Claude API Error: {str(e)}")
-        if response is not None:
-            try:
-                logging.error(f"API Response Content: {response.text}")
-            except:
-                pass
+    for attempt in range(1, max_retries + 1):
+        response = None
+        try:
+            response = requests.post(
+                'https://api.anthropic.com/v1/messages',
+                json=data,
+                headers=headers,
+                timeout=30
+            )
+            response.raise_for_status()
+            content_blocks = response.json().get('content', [])
+            if content_blocks and content_blocks[0].get('type') == 'text':
+                return content_blocks[0].get('text')
+        except requests.exceptions.RequestException as e:
+            logging.error(f"[{attempt}/{max_retries}] Claude API Error: {str(e)}")
+            if response is not None:
+                try:
+                    error_content = response.text
+                    logging.error(f"API Response Content: {error_content}")
+                    if "overloaded" in error_content.lower() and attempt < max_retries:
+                        logging.info("Claude APIが過負荷状態のためリトライします...")
+                        time.sleep(retry_delay)
+                        continue
+                except:
+                    pass
+            break  # 他のエラーならループ終了
+
     return None
 
 # 禁止ワードチェック
