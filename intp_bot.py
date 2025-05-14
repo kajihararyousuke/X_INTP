@@ -132,8 +132,9 @@ def post_tweet():
     else:
         logging.info("現在の時間は投稿対象外です")
 
-# スケジュール設定（3時間ごと）
-schedule.every(3).hours.at(":00").do(post_tweet)
+# スケジュール設定（12時と18時に1日2回投稿）
+schedule.every().day.at("12:00").do(post_tweet)
+schedule.every().day.at("18:00").do(post_tweet)
 
 if __name__ == "__main__":
     logging.info("スケジューラー起動中...")
