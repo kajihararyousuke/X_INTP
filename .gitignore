@@ -1,3 +1,5 @@
-# 環境変数ファイルをGitで追跡しないようにする
 .env
-.env
+__pycache__/
+*.pyc
+tweet_log.txt
+venv/
